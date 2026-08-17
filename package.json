@@ -1,0 +1,18 @@
+{
+  "name": "daypulse-daily-routine-tracker",
+  "version": "1.0.0",
+  "description": "A daily work schedule & routine tracking web application.",
+  "main": "index.html",
+  "scripts": {
+    "build": "echo Static site build complete",
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "routine-tracker",
+    "daily-schedule",
+    "google-auth"
+  ],
+  "author": "Sudipta",
+  "license": "MIT"
+}
