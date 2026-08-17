@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DayPulse - Daily Work Schedule & Routine OS</title>
+  
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Official Google Identity Services (GIS) Client Library -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- App Header Navigation -->
+  <header class="app-header">
+    <div class="nav-container">
+      <a href="#" class="brand-logo">
+        <i class="fa-solid fa-layer-group"></i>
+        <span>DayPulse</span>
+        <span class="brand-tag">NOTIFICATIONS OS</span>
+      </a>
+
+      <!-- Authenticated Nav Actions -->
+      <div id="navAuthenticatedActions" class="nav-actions" style="display: none;">
+        <!-- Date / Clock Display -->
+        <div style="font-size: 0.85rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem;" class="hide-mobile">
+          <i class="fa-regular fa-calendar-check" style="color: var(--pitch-black);"></i>
+          <span id="currentDateDisplay">Today, Aug 04</span>
+        </div>
+
+        <!-- Notification Bell Widget -->
+        <div class="notif-bell-container">
+          <button id="btnNotificationBell" class="notif-bell-btn" title="Pending Work Notifications">
+            <i class="fa-regular fa-bell"></i>
+            <span id="notifBadgeCount" class="notif-badge-count" style="display: none;">0</span>
+          </button>
+
+          <!-- Notification Dropdown Menu -->
+          <div id="notifDropdownMenu" class="notif-dropdown">
+            <div class="notif-dropdown-header">
+              <h4><i class="fa-solid fa-bell"></i> Pending Work Notifications</h4>
+              <button id="btnClearNotifs" class="btn btn-sm btn-secondary" style="padding: 2px 8px; font-size: 0.72rem;">Clear All</button>
+            </div>
+            <div id="notifDropdownList" class="notif-dropdown-list">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Simulate Next Day Button -->
+        <button id="btnSimulateNextDay" class="btn btn-secondary btn-sm" title="Simulate date changing to tomorrow to test column reset">
+          <i class="fa-solid fa-forward"></i> Test Tomorrow (+1 Day)
+        </button>
+
+        <!-- Test Notification Alert Now Button -->
+        <button id="btnTestNotifNow" class="btn btn-secondary btn-sm" title="Trigger instant test notification for current pending tasks">
+          <i class="fa-solid fa-bell"></i> Test Alert
+        </button>
+
+        <!-- Manage / Add New Task Button -->
+        <button id="btnOpenAddTaskModal" class="btn btn-primary btn-sm">
+          <i class="fa-solid fa-plus"></i> Add New Task Column
+        </button>
+
+        <!-- User Profile & Logout -->
+        <div class="user-menu-box">
+          <img id="userAvatarImg" class="user-avatar-img" src="" alt="Profile" style="display: none;">
+          <div id="userAvatarText" class="user-avatar-img">U</div>
+          <span id="userNameDisplay" class="user-display-name">User</span>
+          <button id="btnSignOut" class="icon-btn" title="Sign Out" style="margin-left: 4px;">
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Simulation / Date Travel Banner -->
+  <div id="simulationBanner" class="simulation-bar" style="display: none;">
+    <div>
+      <i class="fa-solid fa-clock-rotate-left"></i> 
+      <strong>Time Travel Test Mode Active:</strong> Viewing date as <span id="simulatedDateText" style="text-decoration: underline; font-weight: bold;"></span>
+    </div>
+    <div>
+      <button id="btnResetSimDate" class="btn btn-sm btn-warning">
+        <i class="fa-solid fa-rotate-left"></i> Return to Real Today
+      </button>
+    </div>
+  </div>
+
+  <!-- AUTH SCREEN VIEW (Shown when user is signed out) -->
+  <div id="authScreenView" class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="auth-logo"><i class="fa-solid fa-shield-halved"></i></div>
+        <h2>Welcome to DayPulse</h2>
+        <p>Authentic Google OAuth & Security Login</p>
+      </div>
+
+      <!-- OFFICIAL GOOGLE IDENTITY SIGN-IN BUTTON CONTAINER -->
+      <div style="display: flex; flex-direction: column; align-items: center; width: 100%; margin-bottom: 1.25rem;">
+        <div id="googleSignInButtonContainer" style="width: 100%; display: flex; justify-content: center;"></div>
+        
+        <button type="button" id="btnConfigClientId" style="background: none; border: none; font-size: 0.75rem; color: var(--text-muted); cursor: pointer; text-decoration: underline; margin-top: 8px;">
+          <i class="fa-solid fa-gear"></i> Configure Custom Google Client ID
+        </button>
+      </div>
+
+      <div class="divider-or">
+        <span>OR CONTINUE WITH EMAIL</span>
+      </div>
+
+      <!-- Auth Tabs: Sign In / Sign Up -->
+      <div class="auth-tabs">
+        <button id="tabAuthSignIn" class="auth-tab-btn active">Sign In</button>
+        <button id="tabAuthSignUp" class="auth-tab-btn">Create Account</button>
+      </div>
+
+      <!-- Sign In Form -->
+      <form id="signInForm">
+        <div class="form-group">
+          <label for="signInEmail">Email Address</label>
+          <input type="email" id="signInEmail" class="form-control" placeholder="developer@daypulse.com" required value="developer@daypulse.com">
+        </div>
+
+        <div class="form-group">
+          <label for="signInPassword">Password</label>
+          <div class="input-group-pass">
+            <input type="password" id="signInPassword" class="form-control" placeholder="••••••••" required value="password123">
+            <button type="button" class="pass-toggle-btn" data-target="signInPassword">
+              <i class="fa-regular fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; font-size: 0.82rem;">
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="checkbox" checked> Remember me
+          </label>
+          <a href="#" id="linkForgotPassword" style="color: var(--text-black); font-weight: 700; text-decoration: underline;">Forgot password?</a>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.8rem;">
+          <i class="fa-solid fa-right-to-bracket"></i> Sign In to Board
+        </button>
+      </form>
+
+      <!-- Sign Up Form (Initially Hidden) -->
+      <form id="signUpForm" style="display: none;">
+        <div class="form-group">
+          <label for="signUpName">Full Name</label>
+          <input type="text" id="signUpName" class="form-control" placeholder="e.g. Sudipta N." required>
+        </div>
+
+        <div class="form-group">
+          <label for="signUpEmail">Email Address</label>
+          <input type="email" id="signUpEmail" class="form-control" placeholder="name@domain.com" required>
+        </div>
+
+        <div class="form-group">
+          <label for="signUpPassword">Password</label>
+          <div class="input-group-pass">
+            <input type="password" id="signUpPassword" class="form-control" placeholder="At least 6 characters" required minlength="6">
+            <button type="button" class="pass-toggle-btn" data-target="signUpPassword">
+              <i class="fa-regular fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.8rem; margin-top: 0.5rem;">
+          <i class="fa-solid fa-user-plus"></i> Create Account & Launch
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN APP DASHBOARD VIEW (Shown when user is signed in) -->
+  <main id="mainAppView" class="main-wrapper" style="display: none;">
+
+    <!-- Summary Stats Bar -->
+    <section class="summary-bar">
+      <div class="summary-card">
+        <div class="summary-icon">
+          <i class="fa-solid fa-list-check"></i>
+        </div>
+        <div class="summary-info" style="width: 100%;">
+          <h4>Daily Progress</h4>
+          <div class="stat-value"><span id="completedCount">0</span> / <span id="totalCount">0</span> Tasks</div>
+          <div class="progress-track">
+            <div id="progressBarFill" class="progress-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-icon">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+        </div>
+        <div class="summary-info">
+          <h4>Last Completed Timestamp</h4>
+          <div class="stat-value" id="lastTimestampText" style="font-size: 1.1rem; color: var(--text-black);">--:--:--</div>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-icon">
+          <i class="fa-solid fa-rotate-right"></i>
+        </div>
+        <div class="summary-info">
+          <h4>Auto Reset Status</h4>
+          <div class="stat-value" style="font-size: 1.05rem;" id="resetStatusText">Active (Resets Daily)</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs & Section Title -->
+    <div class="section-header">
+      <div class="section-title">
+        <i class="fa-solid fa-columns"></i>
+        <span>Daily Task Columns</span>
+      </div>
+
+      <div class="view-tabs">
+        <button id="tabBoardView" class="tab-btn active">
+          <i class="fa-solid fa-table-columns"></i> Task Board
+        </button>
+        <button id="tabHistoryView" class="tab-btn">
+          <i class="fa-solid fa-chart-line"></i> Completion & Blocker Logs
+        </button>
+      </div>
+    </div>
+
+    <!-- Board Columns View -->
+    <div id="boardViewSection">
+      <div id="columnsGrid" class="columns-grid">
+        <!-- Rendered dynamically by JavaScript -->
+      </div>
+    </div>
+
+    <!-- History & Completion Logs View -->
+    <div id="historyViewSection" style="display: none;">
+      <div class="history-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <h3 style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 4px;">
+              <i class="fa-solid fa-clock-rotate-left" style="color: var(--pitch-black);"></i> Historical Completion & Missed Task Blocker Logs
+            </h3>
+            <p style="color: var(--text-muted); font-size: 0.88rem;">
+              Review completion timestamps or look back months later to see why specific tasks were not completed on certain days.
+            </p>
+          </div>
+
+          <div class="view-tabs" style="margin-top: 4px;">
+            <button id="filterLogsAll" class="tab-btn active" style="padding: 4px 12px; font-size: 0.8rem;">All Logs</button>
+            <button id="filterLogsCompleted" class="tab-btn" style="padding: 4px 12px; font-size: 0.8rem;">Completed Only</button>
+            <button id="filterLogsSkipped" class="tab-btn" style="padding: 4px 12px; font-size: 0.8rem;">Missed / Blocker Notes</button>
+          </div>
+        </div>
+
+        <!-- Timeline Log List -->
+        <div id="historyLogsList" class="history-list">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal: Log Reason for Unfinished / Missed Task -->
+  <div id="reasonModal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-pen-to-square" style="color: var(--pitch-black);"></i> Log Blocker / Reason for Unfinished Task</h3>
+        <button id="btnCloseReasonModal" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="reasonForm">
+        <div class="modal-body">
+          <input type="hidden" id="reasonTaskId" value="">
+          
+          <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Task: <strong id="reasonTaskTitleText" style="color: var(--text-black);"></strong>
+          </p>
+
+          <div class="form-group">
+            <label for="inputTaskReason">Why were you unable to finish this task today?</label>
+            <textarea id="inputTaskReason" class="form-control" rows="4" placeholder="e.g. Network outage occurred, had urgent emergency meeting, fell sick, grocery store was closed..." required></textarea>
+          </div>
+
+          <p style="font-size: 0.78rem; color: var(--text-dim);">
+            <i class="fa-solid fa-circle-info"></i> This reason will be permanently archived in your history log so you can review why this task wasn't completed when looking back months from now.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="btnCancelReasonModal" class="btn btn-secondary">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Blocker Reason & Mark Skipped</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Custom Google Client ID Configuration -->
+  <div id="clientIdModal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 460px;">
+      <div class="modal-header">
+        <h3><i class="fa-brands fa-google" style="color: var(--pitch-black);"></i> Google OAuth Client ID Settings</h3>
+        <button id="btnCloseClientIdModal" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Provide your Google Cloud Console OAuth 2.0 Web Client ID to connect your domain for authentic Google Identity login.
+        </p>
+        <div class="form-group">
+          <label for="inputGoogleClientId">Google Client ID</label>
+          <input type="text" id="inputGoogleClientId" class="form-control" placeholder="1234567890-example.apps.googleusercontent.com">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btnSaveClientId" class="btn btn-primary">Save & Re-initialize Google Sign-In</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add / Edit Work Task Column -->
+  <div id="taskModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalTitle"><i class="fa-solid fa-plus-circle"></i> Add New Work Task Column</h3>
+        <button id="btnCloseModal" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="taskForm">
+        <div class="modal-body">
+          <input type="hidden" id="editTaskId" value="">
+          
+          <div class="form-group">
+            <label for="taskTitle">Task / Work Name *</label>
+            <input type="text" id="taskTitle" class="form-control" placeholder="e.g. Afternoon Meal, Client Standup, Code Review" required>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label for="taskCategory">Category Tag</label>
+              <select id="taskCategory" class="form-control">
+                <option value="Health">Health / Meal</option>
+                <option value="Work">Work / Coding</option>
+                <option value="Fitness">Fitness & Gym</option>
+                <option value="Personal">Personal Routine</option>
+                <option value="Learning">Learning & Reading</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="taskTargetTime">Scheduled Target Time *</label>
+              <input type="text" id="taskTargetTime" class="form-control" placeholder="e.g. 01:30 PM or 13:30" value="12:00 PM" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="taskIcon">Column Icon</label>
+            <select id="taskIcon" class="form-control">
+              <option value="fa-utensils">🥣 Meal / Food</option>
+              <option value="fa-bowl-food">🥗 Healthy Lunch</option>
+              <option value="fa-laptop-code">💻 Deep Work / Coding</option>
+              <option value="fa-dumbbell">🏋️ Gym / Exercise</option>
+              <option value="fa-book-open">📖 Reading / Study</option>
+              <option value="fa-clipboard-check">📋 Standup & Review</option>
+              <option value="fa-heart-pulse">❤️ Health & Meditation</option>
+              <option value="fa-briefcase">💼 Business Task</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="taskDescription">Task Description / Guidelines</label>
+            <textarea id="taskDescription" class="form-control" rows="2" placeholder="Brief note or instructions for this daily recurring task..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Column Tone Accent</label>
+            <div class="color-options" id="colorPickerOptions">
+              <div class="color-dot selected" style="background: #000000;" data-color="#000000"></div>
+              <div class="color-dot" style="background: #404040;" data-color="#404040"></div>
+              <div class="color-dot" style="background: #737373;" data-color="#737373"></div>
+              <div class="color-dot" style="background: #a3a3a3;" data-color="#a3a3a3"></div>
+              <div class="color-dot" style="background: #d4d4d4;" data-color="#d4d4d4"></div>
+            </div>
+            <input type="hidden" id="taskColor" value="#000000">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" id="btnCancelModal" class="btn btn-secondary">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveTask">Save Task Column</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Main JavaScript App Logic -->
+  <script src="js/state.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
